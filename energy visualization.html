@@ -1,0 +1,750 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Energy Visualization: AB Lower Bound vs AC Upper Bound</title>
+  <style>
+    :root {
+      --blue: #4C8FC2;
+      --green: #45B579;
+      --red: #D35D5D;
+      --orange: #E69A45;
+      --purple: #8E6BBE;
+      --gray: #555;
+      --light-gray: #f3f4f6;
+      --border: #d6d8dc;
+      --dark: #111827;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: var(--dark);
+    }
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 26px 30px 38px;
+    }
+    .title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      margin: 4px 0 8px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 18px;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1.45fr 1.35fr;
+      gap: 14px;
+      align-items: end;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fbfbfc;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .control label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 7px;
+      color: #374151;
+    }
+    select, input[type="range"] {
+      width: 100%;
+    }
+    select {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      background: white;
+    }
+    .range-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 112px;
+      gap: 12px;
+      align-items: center;
+    }
+    .value-pill {
+      text-align: center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      border: 1px solid var(--border);
+      background: white;
+      white-space: nowrap;
+      min-width: 112px;
+    }
+    .bound-card,
+    .status-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      font-size: 14px;
+      line-height: 1.35;
+      min-height: 76px;
+      background: white;
+    }
+    .bound-card strong,
+    .status-card strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 3px;
+    }
+    .bound-card {
+      border-color: #cfd7e6;
+      background: #f8fbff;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .model-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .model-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: white;
+      min-height: 205px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .node-title {
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .node-title b {
+      font-size: 21px;
+    }
+    .image-box {
+      border: 1px dashed #b6bcc6;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+      overflow: hidden;
+      min-height: 140px;
+      position: relative;
+    }
+    .svg-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      font-family: unset !important;
+    }
+    .placeholder {
+      text-align: center;
+      font-size: 13px;
+      color: #6b7280;
+      padding: 12px;
+      line-height: 1.35;
+    }
+    .chart-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: white;
+      padding: 14px 16px 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    }
+    .chart-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 6px;
+    }
+    .chart-heading h2 {
+      font-size: 20px;
+      margin: 0;
+    }
+    .formula {
+      font-size: 14px;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    svg * {
+      font-family: inherit !important;
+    }
+    svg {
+      width: 100%;
+      display: block;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      font-size: 14px;
+      margin: 8px 0 4px;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+     .legend-label {
+      white-space: nowrap;
+      letter-spacing: -0.02em;
+    }
+    .energy-symbol {
+      display: inline-block;
+      white-space: nowrap;
+      letter-spacing: -0.02em;
+    }
+    .energy-symbol sub {
+      position: relative;
+      top: 0.26em;
+      margin-left: -0.45em;
+      font-size: 0.68em;
+      line-height: 0;
+      vertical-align: baseline;
+      letter-spacing: normal;
+    }
+    .note-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .note {
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.35;
+      border: 1px solid var(--border);
+    }
+    .note.red { background: #fff1f1; border-color: #efb3b3; }
+    .note.green { background: #f0fff6; border-color: #adddbc; }
+    .note.orange { background: #fff7ed; border-color: #f1c28f; }
+    .small {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    @media (max-width: 1000px) {
+      .toolbar, .model-row, .note-grid {
+        grid-template-columns: 1fr;
+      }
+      .formula {
+        white-space: normal;
+      }
+      .chart-heading {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="title">GenAI-Assisted Energy Transformation Visualization</h1>
+    <div class="subtitle">AB system gives the lower speed bound; AC system gives the upper speed bound</div>
+    <section class="toolbar">
+      <div class="control">
+        <label for="scenario">collision system</label>
+        <select id="scenario">
+          <option value="AB">A+B lower-bound test</option>
+          <option value="AC">A+C upper-bound test</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="speed">Dimensionless initial speed</label>
+        <div class="range-row">
+          <input id="speed" type="range" min="2.5" max="7.2" step="0.01" value="3.2" />
+          <div id="speedValue" class="value-pill">u = 3.20</div>
+        </div>
+      </div>
+      <div class="bound-card">
+        <strong>Global physical interval</strong>
+        AB lower bound: u &gt; 4.00<br>
+        AC upper bound: u &lt; √32 ≈ 5.66
+      </div>
+      <div id="status" class="status-card"></div>
+    </section>
+    <section class="layout">
+      <div class="model-row">
+        <div class="model-card">
+          <div class="node-title"><b>Node 1</b><br>Pre-collision</div>
+          <div class="image-box">
+            <img id="img1" class="svg-image" alt="Node 1 state diagram">
+            <div class="placeholder">Insert your SVG here<br><b>AB_node1.svg / AC_node1.svg</b></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="node-title"><b>Node 2</b><br>Post-collision</div>
+          <div class="image-box">
+            <img id="img2" class="svg-image" alt="Node 2 state diagram">
+            <div class="placeholder">Insert your SVG here<br><b>AB_node2.svg / AC_node2.svg</b></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="node-title"><b>Node 3</b><br>Max compression</div>
+          <div class="image-box">
+            <img id="img3" class="svg-image" alt="Node 3 state diagram">
+            <div class="placeholder">Insert your SVG here<br><b>AB_node3.svg / AC_node3.svg</b></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="node-title"><b>Node 4</b><br>separation</div>
+          <div class="image-box">
+            <img id="img4" class="svg-image" alt="Node 4 state diagram">
+            <div class="placeholder">Insert your SVG here<br><b>AB_node4.svg / AC_node4.svg</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-heading">
+          <h2 id="chartTitle">Normalized energy transformation</h2>
+          <div id="formula" class="formula"></div>
+        </div>
+        <div class="legend">
+          <span><i class="swatch" style="background: var(--blue)"></i><span class="legend-label">Kinetic energy <span class="energy-symbol">E<sub>k</sub></span></span></span>
+          <span><i class="swatch" style="background: var(--purple)"></i><span class="legend-label">Gravitational potential energy <span class="energy-symbol">E<sub>g</sub></span></span></span>
+          <span><i class="swatch" style="background: var(--green)"></i><span class="legend-label">Elastic potential energy <span class="energy-symbol">E<sub>p</sub></span></span></span>
+          <span><i class="swatch" style="background: var(--red)"></i>Dissipated energy Q</span>
+        </div>
+        <svg id="energySvg" viewBox="0 0 1180 570" role="img" aria-label="Energy visualization chart"></svg>
+      </div>
+      <div class="note-grid">
+        <div class="note red">
+          <b>Low-speed failure: AB system</b><br>
+          If u ≤ 4, the post-collision A+B energy is insufficient for B to return to Q. The AB chart marks the failure with Eₖ &lt; 0.
+        </div>
+        <div class="note green">
+          <b>Physical oasis</b><br>
+          The complete process is self-consistent only when both conditions hold: 4 &lt; u &lt; √32.
+        </div>
+        <div class="note orange">
+          <b>High-speed failure: AC system</b><br>
+          If u ≥ √32, the A+C return process consumes too much energy, so C cannot return and separate with positive kinetic energy.
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const GLOBAL_BOUNDS = {
+      uMinFromAB: 4,
+      uMaxFromAC: Math.sqrt(32)
+    };
+    const CONFIG = {
+      AB: {
+        key: "AB",
+        label: "A+B system",
+        focus: "Lower-bound test",
+        uInitial: 3.2,
+        imageFiles: ["AB_node1.svg", "AB_node2.svg", "AB_node3.svg", "AB_node4.svg"]
+      },
+      AC: {
+        key: "AC",
+        label: "A+C system",
+        focus: "Upper-bound test",
+        uInitial: 6.2,
+        imageFiles: ["AC_node1.svg", "AC_node2.svg", "AC_node3.svg", "AC_node4.svg"]
+      }
+    };
+    const scenarioSelect = document.getElementById("scenario");
+    const speedInput = document.getElementById("speed");
+    const speedValue = document.getElementById("speedValue");
+    const statusBox = document.getElementById("status");
+    const chartTitle = document.getElementById("chartTitle");
+    const formulaBox = document.getElementById("formula");
+    const svg = document.getElementById("energySvg");
+    const imgEls = [1,2,3,4].map(n => document.getElementById(`img${n}`));
+    function clamp(x, lo, hi) {
+      return Math.max(lo, Math.min(hi, x));
+    }
+    function classifyGlobal(u) {
+      if (u <= GLOBAL_BOUNDS.uMinFromAB) return "low";
+      if (u >= GLOBAL_BOUNDS.uMaxFromAC) return "high";
+      return "valid";
+    }
+    function computeState(config, u) {
+      const uMin = GLOBAL_BOUNDS.uMinFromAB;
+      const uMax = GLOBAL_BOUNDS.uMaxFromAC;
+      const globalRegime = classifyGlobal(u);
+      const prOverL = (u * u) / 32;
+      const available = 50;
+      const collisionLoss = 50;
+      if (config.key === "AB") {
+        const requiredReturn = 800 / (u * u);
+        const residual = available - requiredReturn;
+        const localRegime = residual < 0 ? "low" : "valid";
+        return {
+          analysis: "AB",
+          available,
+          collisionLoss,
+          requiredReturn,
+          residual,
+          prOverL,
+          uMin,
+          uMax,
+          localRegime,
+          globalRegime
+        };
+      }
+      const residual = (-0.5 + 16 / (u * u)) * 100;
+      const dissipationDemand = available - residual;
+      const localRegime = residual <= 0 ? "high" : "valid";
+      return {
+        analysis: "AC",
+        available,
+        collisionLoss,
+        requiredReturn: dissipationDemand,
+        residual,
+        prOverL,
+        uMin,
+        uMax,
+        localRegime,
+        globalRegime
+      };
+    }
+    function buildNodeData(state) {
+      const demand = Math.max(0, state.requiredReturn || 0);
+      const gravityDemand = demand / 2;
+      const frictionDemand = demand / 2;
+      if (state.analysis === "AB") {
+        return [
+          { node: "Node 1", kinetic: 100, gravity: 0, elastic: 0, dissipated: 0 },
+          { node: "Node 2", kinetic: state.available, gravity: 0, elastic: 0, dissipated: state.collisionLoss },
+          { node: "Node 3", kinetic: 0, gravity: 0, elastic: state.available, dissipated: state.collisionLoss },
+          { node: "Node 4", kinetic: state.residual, gravity: gravityDemand, elastic: 0, dissipated: state.collisionLoss + frictionDemand }
+        ];
+      }
+      return [
+        { node: "Node 1", kinetic: 100, gravity: 0, elastic: 0, dissipated: 0 },
+        { node: "Node 2", kinetic: state.available, gravity: 0, elastic: 0, dissipated: state.collisionLoss },
+        { node: "Node 3", kinetic: 0, gravity: 0, elastic: state.available, dissipated: state.collisionLoss },
+        { node: "Node 4", kinetic: state.residual, gravity: gravityDemand, elastic: 0, dissipated: state.collisionLoss + frictionDemand }
+      ];
+    }
+    function clearSvg() {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+    function el(name, attrs = {}, text = null) {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+      if (text !== null) node.textContent = text;
+      return node;
+    }
+    function drawText(x, y, t, a = {}) {
+      svg.appendChild(el("text", { x, y, ...a }, t));
+    }
+    function drawLine(x1, y1, x2, y2, a = {}) {
+      svg.appendChild(el("line", { x1, y1, x2, y2, ...a }));
+    }
+    function drawRect(x, y, w, h, a = {}) {
+      svg.appendChild(el("rect", { x, y, width: w, height: h, ...a }));
+    }
+    function formatPct(x) {
+      return `${x.toFixed(1)}%`;
+    }
+    function drawChart(config, state) {
+      clearSvg();
+      const data = buildNodeData(state);
+      const W = 1180;
+      const H = 570;
+      const margin = { left: 90, right: 35, top: 42, bottom: 165 };
+      const chartW = W - margin.left - margin.right;
+      const chartH = H - margin.top - margin.bottom;
+      const baseline = margin.top + chartH;
+      const allValues = [];
+      data.forEach(d => {
+        ["kinetic", "gravity", "elastic", "dissipated"].forEach(k => allValues.push(d[k]));
+      });
+      const rawMax = Math.max(125, ...allValues);
+      const lowestValue = Math.min(...allValues);
+      const rawMin = Math.min(-50, lowestValue);
+      const yMax = Math.ceil((rawMax + 10) / 25) * 25;
+      const yMin = Math.floor(rawMin / 25) * 25;
+      const scaleY = v => baseline - ((v - yMin) / (yMax - yMin)) * chartH;
+      drawRect(0, 0, W, H, { fill: "white" });
+      const defs = el("defs");
+      const redArrow = el("marker", { id: "arrow-red", markerWidth: 10, markerHeight: 10, refX: 8, refY: 3, orient: "auto", markerUnits: "strokeWidth" });
+      redArrow.appendChild(el("path", { d: "M0,0 L0,6 L9,3 z", fill: "#b91c1c" }));
+      defs.appendChild(redArrow);
+      const orangeArrow = el("marker", { id: "arrow-orange", markerWidth: 10, markerHeight: 10, refX: 8, refY: 3, orient: "auto", markerUnits: "strokeWidth" });
+      orangeArrow.appendChild(el("path", { d: "M0,0 L0,6 L9,3 z", fill: "#b45309" }));
+      defs.appendChild(orangeArrow);
+      svg.appendChild(defs);
+      const ticks = [];
+      for (let t = Math.ceil(yMin / 25) * 25; t <= yMax; t += 25) ticks.push(t);
+      ticks.forEach(t => {
+        const y = scaleY(t);
+        drawLine(margin.left, y, W - margin.right, y, {
+          stroke: t === 0 ? "#111" : "#d1d5db",
+          "stroke-width": t === 0 ? 2 : 1,
+          "stroke-dasharray": t === 0 ? "" : "2 3"
+        });
+        drawText(margin.left - 14, y + 5, `${t}%`, {
+          "text-anchor": "end",
+          "font-size": 16,
+          fill: "#374151"
+        });
+      });
+      drawText(22, margin.top + chartH / 2, "Energy percentage relative to E₀", {
+        transform: `rotate(-90 22 ${margin.top + chartH / 2})`,
+        "text-anchor": "middle",
+        "font-size": 18,
+        "font-weight": 700,
+        fill: "#111827"
+      });
+      const y100 = scaleY(100);
+      drawLine(margin.left, y100, W - margin.right, y100, {
+        stroke: "#111",
+        "stroke-width": 2,
+        "stroke-dasharray": "10 7"
+      });
+      drawText(margin.left + chartW * 0.31, y100 - 14, "Reference initial energy E₀ = 100%", {
+        "text-anchor": "middle",
+        "font-size": 18,
+        "font-weight": 800,
+        fill: "#111"
+      });
+      if (state.residual < 0) {
+        const y0 = scaleY(0);
+        const yNeg = scaleY(state.residual);
+        drawRect(margin.left, y0, chartW, yNeg - y0, { fill: "#fff1f1", opacity: 0.95 });
+      }
+      const groupW = chartW / data.length;
+      const barW = 30;
+      const gap = 8;
+      const colors = {
+        kinetic: "#4C8FC2",
+        gravity: "#8E6BBE",
+        elastic: "#45B579",
+        dissipated: "#D35D5D"
+      };
+      data.forEach((d, i) => {
+        const center = margin.left + groupW * (i + 0.5);
+        const keys = ["kinetic", "gravity", "elastic", "dissipated"];
+        const startX = center - (keys.length * barW + (keys.length - 1) * gap) / 2;
+        keys.forEach((key, j) => {
+          const v = d[key];
+          if (Math.abs(v) < 1e-9) return;
+          const x = startX + j * (barW + gap);
+          const y = v >= 0 ? scaleY(v) : scaleY(0);
+          const h = Math.abs(scaleY(v) - scaleY(0));
+          drawRect(x, y, barW, h, { fill: colors[key], rx: 2 });
+          const ox = { kinetic: -8, gravity: 8, elastic: -8, dissipated: 8 }[key] || 0;
+          const ly = v >= 0 ? Math.max(y - 7, margin.top + 14) : Math.min(y + h + 18, baseline - 8);
+          drawText(x + barW / 2 + ox, ly, formatPct(v), {
+            "text-anchor": "middle",
+            "font-size": 12,
+            "font-weight": 700,
+            fill: key === "kinetic" && v < 0 ? "#b91c1c" : "#374151"
+          });
+        });
+        drawText(center, H - 138, d.node, {
+          "text-anchor": "middle",
+          "font-size": 18,
+          "font-weight": 800,
+          fill: "#111827"
+        });
+      });
+      function drawNegativeKineticCallout(color, markerId) {
+        const cx = margin.left + groupW * 3.5;
+        const kw = 4 * barW + 3 * gap;
+        const nx = cx - kw / 2 + barW / 2;
+        const ny = scaleY(state.residual) + 18;
+        const arrowStartX = nx + 92;
+        const arrowStartY = Math.min(ny + 42, baseline - 26);
+        const labelX = arrowStartX + 16;
+        const labelY = arrowStartY + 6;
+        const arrowTipX = nx + 34;   // keep the arrow farther from the percentage label
+        const arrowTipY = ny - 4;
+
+        drawLine(arrowStartX, arrowStartY, arrowTipX, arrowTipY, {
+          stroke: color,
+          "stroke-width": 2.4,
+          "marker-end": `url(#${markerId})`
+        });
+        drawText(labelX, labelY, "Eₖ < 0", {
+          "text-anchor": "start",
+          "font-size": 22,
+          "font-weight": 900,
+          fill: color
+        });
+      }
+      if (config.key === "AB" && state.localRegime === "low") {
+        drawNegativeKineticCallout("#b91c1c", "arrow-red");
+      }
+      if (config.key === "AC" && state.localRegime === "high") {
+        drawNegativeKineticCallout("#b45309", "arrow-orange");
+      }
+      if (config.key === "AB" && state.globalRegime === "high") {
+        const cx = margin.left + chartW * 0.64;
+        drawText(cx, margin.top + 20, "Upper bound is not calculated from AB", {
+          "text-anchor": "middle",
+          "font-size": 17,
+          "font-weight": 900,
+          fill: "#b45309"
+        });
+        drawText(cx, margin.top + 44, "Switch to A+C to see the high-speed failure", {
+          "text-anchor": "middle",
+          "font-size": 13,
+          fill: "#b45309"
+        });
+      }
+      if (config.key === "AC" && state.globalRegime === "low") {
+        const cx = margin.left + chartW * 0.5;
+        drawText(cx, margin.top + 20, "Lower bound is calculated from AB", {
+          "text-anchor": "middle",
+          "font-size": 17,
+          "font-weight": 900,
+          fill: "#991b1b"
+        });
+        drawText(cx, margin.top + 44, "Switch to A+B to see the low-speed failure", {
+          "text-anchor": "middle",
+          "font-size": 13,
+          fill: "#991b1b"
+        });
+      }
+      const py = H - 58;
+      const px = margin.left;
+      const pw = chartW;
+      const umin = state.uMin;
+      const umax = state.uMax;
+      const ulo = +speedInput.min;
+      const uhi = +speedInput.max;
+      const sxRaw = u => px + ((u - ulo) / (uhi - ulo)) * pw;
+      const sx = u => clamp(sxRaw(u), px, px + pw);
+      drawRect(px, py, sx(umin) - px, 12, { fill: "#fadbd8" });
+      drawRect(sx(umin), py, sx(umax) - sx(umin), 12, { fill: "#d5f5e3" });
+      drawRect(sx(umax), py, px + pw - sx(umax), 12, { fill: "#fdebd0" });
+      drawRect(px, py, pw, 12, { fill: "none", stroke: "#6b7280" });
+      drawLine(sx(umin), py - 6, sx(umin), py + 18, {
+        stroke: "#b91c1c",
+        "stroke-width": 2,
+        "stroke-dasharray": "4 3"
+      });
+      drawLine(sx(umax), py - 6, sx(umax), py + 18, {
+        stroke: "#b45309",
+        "stroke-width": 2,
+        "stroke-dasharray": "4 3"
+      });
+      drawLine(sx(+speedInput.value), py - 12, sx(+speedInput.value), py + 24, {
+        stroke: "#111",
+        "stroke-width": 3
+      });
+      drawText(sx(umin), py - 18, "AB lower: u=4.00", {
+        "text-anchor": "middle",
+        "font-size": 15,
+        fill: "#991b1b",
+        "font-weight": 800
+      });
+      drawText(sx(umax), py - 18, `AC upper: u=${umax.toFixed(2)}`, {
+        "text-anchor": "middle",
+        "font-size": 15,
+        fill: "#92400e",
+        "font-weight": 800
+      });
+      drawText((sx(umin) + sx(umax)) / 2, py + 31, "physical oasis", {
+        "text-anchor": "middle",
+        "font-size": 12,
+        fill: "#166534",
+        "font-weight": 800
+      });
+      drawText(sx(+speedInput.value), py + 50, `current u=${(+speedInput.value).toFixed(2)}`, {
+        "text-anchor": "middle",
+        "font-size": 12,
+        fill: "#111",
+        "font-weight": 700
+      });
+    }
+    function setImages(config) {
+      imgEls.forEach((img, i) => {
+        const box = img.parentElement;
+        const ph = box.querySelector(".placeholder");
+        img.style.display = "none";
+        ph.style.display = "block";
+        img.src = config.imageFiles[i];
+        img.onload = () => {
+          img.style.display = "block";
+          ph.style.display = "none";
+        };
+        img.onerror = () => {
+          img.style.display = "none";
+          ph.style.display = "block";
+        };
+      });
+    }
+    function getActiveConfig() {
+      return CONFIG[scenarioSelect.value];
+    }
+    function update() {
+      const cfg = getActiveConfig();
+      const u = +speedInput.value;
+      const st = computeState(cfg, u);
+      speedValue.textContent = `u = ${u.toFixed(2)}`;
+      chartTitle.textContent = `${cfg.label}: ${cfg.focus}`;
+      if (cfg.key === "AB") {
+        formulaBox.textContent = `AB lower bound: (1/4)mv₀² > 4mgLsinθ ⇒ u > 4; global interval: 4 < u < √32`;
+      } else {
+        formulaBox.textContent = `AC upper bound: Eₖ,return = -(1/4)mv₀² + 8mgLsinθ > 0 ⇒ u < √32`;
+      }
+      if (cfg.key === "AB" && st.localRegime === "low") {
+        statusBox.style.background = "#fff1f1";
+        statusBox.style.borderColor = "#c0392b";
+        statusBox.innerHTML = "<strong>LOW-SPEED FAILURE FROM AB</strong>B cannot return to Q because the required return energy exceeds the available post-collision energy.";
+      } else if (cfg.key === "AC" && st.localRegime === "high") {
+        statusBox.style.background = "#fff7ed";
+        statusBox.style.borderColor = "#e67e22";
+        statusBox.innerHTML = "<strong>HIGH-SPEED FAILURE FROM AC</strong>C cannot return and separate with positive kinetic energy.";
+      } else if (st.globalRegime === "low") {
+        statusBox.style.background = "#fff1f1";
+        statusBox.style.borderColor = "#c0392b";
+        statusBox.innerHTML = "<strong>GLOBAL LOWER-BOUND WARNING</strong>The lower speed bound comes from the A+B system. Select A+B to inspect Eₖ < 0.";
+      } else if (st.globalRegime === "high") {
+        statusBox.style.background = "#fff7ed";
+        statusBox.style.borderColor = "#e67e22";
+        statusBox.innerHTML = "<strong>GLOBAL UPPER-BOUND WARNING</strong>The upper speed bound comes from the A+C system. Select A+C to inspect Eₖ < 0.";
+      } else {
+        statusBox.style.background = "#f0fff6";
+        statusBox.style.borderColor = "#27ae60";
+        statusBox.innerHTML = "<strong>PHYSICAL OASIS</strong>The complete process satisfies both AB lower-bound and AC upper-bound conditions.";
+      }
+      drawChart(cfg, st);
+    }
+    scenarioSelect.addEventListener("change", () => {
+      const cfg = CONFIG[scenarioSelect.value];
+      speedInput.value = cfg.uInitial;
+      setImages(cfg);
+      update();
+    });
+    speedInput.addEventListener("input", update);
+    setImages(CONFIG[scenarioSelect.value]);
+    update();
+  </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
